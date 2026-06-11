@@ -1,0 +1,477 @@
+{
+  "name": "Code Summarizer and Comments Adder",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## STEPS\n\n1. Read the code related mail->trigger\n2. Summarize the code using LLM.\n3. Generate the comments for the code.\n4. step 2 or 3 to be done in parallel.\n5. Merge the outputs of step 2 and 3.\n6. Send the output to me as mail.",
+        "height": 208,
+        "width": 320
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1152,
+        -384
+      ],
+      "typeVersion": 1,
+      "id": "1974dd6c-6c9a-4162-96c1-c55087b7cbc4",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "sender": "1912maira@gmail.com"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -928,
+        -64
+      ],
+      "id": "3b5ed994-9fe3-4010-a12c-710cab743a7f",
+      "name": "Gmail Trigger",
+      "alwaysOutputData": false,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TWhGfeMmwHTqUNPK",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Given the code below\nCode:\n{{ $json.text }}\n\nGenerate the comments for the code so that i can understand what each line of the code does.\nNOTE: Donot modify the existing lines at all.\nJust add the comments wherever required.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are a helpful assistant and know how to write code in C++. You can help me to understand the code by adding comments to it. "
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -656,
+        -256
+      ],
+      "id": "309d896d-da42-4594-b352-75e0d21b3218",
+      "name": "Comments_Addition"
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-chat-v3-0324",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -80
+      ],
+      "id": "e54e5a42-4086-4c0a-b724-bd5f7837f97e",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "rYWotcY7vGhDxwSU",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "deepseek/deepseek-chat-v3-0324",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        256
+      ],
+      "id": "344739e8-1602-4f4e-a6db-82fe94808a91",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "rYWotcY7vGhDxwSU",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Given the code below\nCode:\n{{ $json.text }}\ngenerate a summary of what this code does in very simple language.Do note that the summary should contain all the important details there are in the code so that i know what the code is about in a quick glance. ",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are an expert in C++ code. you have the ability to summarize code in simple language and have the knack to cover important details in the summary."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -656,
+        96
+      ],
+      "id": "38ce1689-bea1-4c08-b06d-570ed83e0e29",
+      "name": "Code_Summary"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -208,
+        -80
+      ],
+      "id": "8b4bd829-a7a3-4891-bb6f-7f0616ef31d3",
+      "name": "Merge",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "text"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -80
+      ],
+      "id": "9affd64f-da26-4eb5-9f7a-3f54eea5a751",
+      "name": "Aggregate",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d117c618-a09b-4603-89fa-78f8bd892002",
+              "name": "Message",
+              "value": "=Code with comments:\n{{ $json.text[0] }}\n\n\nCode Summary:\n{{ $json.text[1] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        208,
+        -80
+      ],
+      "id": "360f022d-aef6-45f1-b9ba-7c5c47c3a504",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Convert the message into html format.\nInclude proper code blocks wherever necessary. The code blocks should have syntax highlighting for the specific language used in the code\n\nMessage:\n{{ $json.Message }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You can convert any message into html format that can be sent on mail to the user"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        416,
+        -80
+      ],
+      "id": "64c49972-9574-4a98-8d4e-b228b48000a7",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        416,
+        80
+      ],
+      "id": "0ea4c01e-84ae-4285-8695-66151107d878",
+      "name": "OpenRouter Chat Model2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "rYWotcY7vGhDxwSU",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "1912maira@gmail.com",
+        "subject": "Code Summary and Comments",
+        "message": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        768,
+        -80
+      ],
+      "id": "ae45db95-89fa-4211-8544-fc5a629e49ef",
+      "name": "Send a message",
+      "webhookId": "64423665-232e-44ad-9183-e1c20f75d8d0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "TWhGfeMmwHTqUNPK",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Gmail Trigger": [
+      {
+        "json": {
+          "id": "19ea900e109e5666",
+          "threadId": "19ea9004c6162067",
+          "labelIds": [
+            "IMPORTANT",
+            "SENT",
+            "INBOX"
+          ],
+          "sizeEstimate": 6533,
+          "headers": {
+            "mime-version": "MIME-Version: 1.0",
+            "date": "Date: Mon, 8 Jun 2026 13:51:37 -0700",
+            "message-id": "Message-ID: <CABGVZyXnqYdECXDtFg5EY2Gk4qhUFxEnPfFFjqm10-_5US1eTg@mail.gmail.com>",
+            "subject": "Subject: code n8n",
+            "from": "From: MAIRA <1912maira@gmail.com>",
+            "to": "To: MAIRA <1912maira@gmail.com>",
+            "content-type": "Content-Type: multipart/alternative; boundary=\"00000000000071483b0653c42b1c\""
+          },
+          "html": "<div dir=\"ltr\">#include &lt;iostream&gt;<br>#include &lt;fstream&gt;<br>#include &lt;vector&gt;<br>#include &lt;iomanip&gt;<br>using namespace std;<br><br>class Student {<br>private:<br>    int id;<br>    string name;<br>    float marks;<br><br>public:<br>    Student(int i, string n, float m) {<br>        id = i;<br>        name = n;<br>        marks = m;<br>    }<br><br>    void display() const {<br>        cout &lt;&lt; left &lt;&lt; setw(10) &lt;&lt; id<br>             &lt;&lt; setw(20) &lt;&lt; name<br>             &lt;&lt; setw(10) &lt;&lt; marks &lt;&lt; endl;<br>    }<br><br>    int getId() const {<br>        return id;<br>    }<br><br>    string getName() const {<br>        return name;<br>    }<br><br>    float getMarks() const {<br>        return marks;<br>    }<br>};<br><br>void saveToFile(const vector&lt;Student&gt;&amp; students) {<br>    ofstream file(&quot;students.txt&quot;);<br><br>    if (!file) {<br>        cout &lt;&lt; &quot;Error opening file!&quot; &lt;&lt; endl;<br>        return;<br>    }<br><br>    for (const auto&amp; student : students) {<br>        file &lt;&lt; student.getId() &lt;&lt; &quot; &quot;<br>             &lt;&lt; student.getName() &lt;&lt; &quot; &quot;<br>             &lt;&lt; student.getMarks() &lt;&lt; endl;<br>    }<br><br>    file.close();<br>}<br><br>void displayTopper(const vector&lt;Student&gt;&amp; students) {<br>    if (students.empty()) {<br>        cout &lt;&lt; &quot;No student records found.&quot; &lt;&lt; endl;<br>        return;<br>    }<br><br>    Student topper = students[0];<br><br>    for (const auto&amp; student : students) {<br>        if (student.getMarks() &gt; topper.getMarks()) {<br>            topper = student;<br>        }<br>    }<br><br>    cout &lt;&lt; &quot;\\nTop Performing Student\\n&quot;;<br>    cout &lt;&lt; &quot;----------------------\\n&quot;;<br>    topper.display();<br>}<br><br>int main() {<br>    vector&lt;Student&gt; students;<br><br>    students.push_back(Student(101, &quot;Ali&quot;, 87.5));<br>    students.push_back(Student(102, &quot;Sara&quot;, 92.0));<br>    students.push_back(Student(103, &quot;Ahmed&quot;, 78.4));<br>    students.push_back(Student(104, &quot;Ayesha&quot;, 95.6));<br><br>    cout &lt;&lt; left &lt;&lt; setw(10) &lt;&lt; &quot;ID&quot;<br>         &lt;&lt; setw(20) &lt;&lt; &quot;Name&quot;<br>         &lt;&lt; setw(10) &lt;&lt; &quot;Marks&quot; &lt;&lt; endl;<br><br>    cout &lt;&lt; &quot;--------------------------------------\\n&quot;;<br><br>    for (const auto&amp; student : students) {<br>        student.display();<br>    }<br><br>    displayTopper(students);<br><br>    saveToFile(students);<br><br>    cout &lt;&lt; &quot;\\nStudent records saved successfully.&quot; &lt;&lt; endl;<br><br>    return 0;<br>}</div>\n",
+          "text": "#include <iostream>\n#include <fstream>\n#include <vector>\n#include <iomanip>\nusing namespace std;\n\nclass Student {\nprivate:\n    int id;\n    string name;\n    float marks;\n\npublic:\n    Student(int i, string n, float m) {\n        id = i;\n        name = n;\n        marks = m;\n    }\n\n    void display() const {\n        cout << left << setw(10) << id\n             << setw(20) << name\n             << setw(10) << marks << endl;\n    }\n\n    int getId() const {\n        return id;\n    }\n\n    string getName() const {\n        return name;\n    }\n\n    float getMarks() const {\n        return marks;\n    }\n};\n\nvoid saveToFile(const vector<Student>& students) {\n    ofstream file(\"students.txt\");\n\n    if (!file) {\n        cout << \"Error opening file!\" << endl;\n        return;\n    }\n\n    for (const auto& student : students) {\n        file << student.getId() << \" \"\n             << student.getName() << \" \"\n             << student.getMarks() << endl;\n    }\n\n    file.close();\n}\n\nvoid displayTopper(const vector<Student>& students) {\n    if (students.empty()) {\n        cout << \"No student records found.\" << endl;\n        return;\n    }\n\n    Student topper = students[0];\n\n    for (const auto& student : students) {\n        if (student.getMarks() > topper.getMarks()) {\n            topper = student;\n        }\n    }\n\n    cout << \"\\nTop Performing Student\\n\";\n    cout << \"----------------------\\n\";\n    topper.display();\n}\n\nint main() {\n    vector<Student> students;\n\n    students.push_back(Student(101, \"Ali\", 87.5));\n    students.push_back(Student(102, \"Sara\", 92.0));\n    students.push_back(Student(103, \"Ahmed\", 78.4));\n    students.push_back(Student(104, \"Ayesha\", 95.6));\n\n    cout << left << setw(10) << \"ID\"\n         << setw(20) << \"Name\"\n         << setw(10) << \"Marks\" << endl;\n\n    cout << \"--------------------------------------\\n\";\n\n    for (const auto& student : students) {\n        student.display();\n    }\n\n    displayTopper(students);\n\n    saveToFile(students);\n\n    cout << \"\\nStudent records saved successfully.\" << endl;\n\n    return 0;\n}\n",
+          "textAsHtml": "<p>#include &lt;iostream&gt;<br/>#include &lt;fstream&gt;<br/>#include &lt;vector&gt;<br/>#include &lt;iomanip&gt;<br/>using namespace std;</p><p>class Student {<br/>private:<br/>    int id;<br/>    string name;<br/>    float marks;</p><p>public:<br/>    Student(int i, string n, float m) {<br/>        id = i;<br/>        name = n;<br/>        marks = m;<br/>    }</p><p>    void display() const {<br/>        cout &lt;&lt; left &lt;&lt; setw(10) &lt;&lt; id<br/>             &lt;&lt; setw(20) &lt;&lt; name<br/>             &lt;&lt; setw(10) &lt;&lt; marks &lt;&lt; endl;<br/>    }</p><p>    int getId() const {<br/>        return id;<br/>    }</p><p>    string getName() const {<br/>        return name;<br/>    }</p><p>    float getMarks() const {<br/>        return marks;<br/>    }<br/>};</p><p>void saveToFile(const vector&lt;Student&gt;&amp; students) {<br/>    ofstream file(&quot;students.txt&quot;);</p><p>    if (!file) {<br/>        cout &lt;&lt; &quot;Error opening file!&quot; &lt;&lt; endl;<br/>        return;<br/>    }</p><p>    for (const auto&amp; student : students) {<br/>        file &lt;&lt; student.getId() &lt;&lt; &quot; &quot;<br/>             &lt;&lt; student.getName() &lt;&lt; &quot; &quot;<br/>             &lt;&lt; student.getMarks() &lt;&lt; endl;<br/>    }</p><p>    file.close();<br/>}</p><p>void displayTopper(const vector&lt;Student&gt;&amp; students) {<br/>    if (students.empty()) {<br/>        cout &lt;&lt; &quot;No student records found.&quot; &lt;&lt; endl;<br/>        return;<br/>    }</p><p>    Student topper = students[0];</p><p>    for (const auto&amp; student : students) {<br/>        if (student.getMarks() &gt; topper.getMarks()) {<br/>            topper = student;<br/>        }<br/>    }</p><p>    cout &lt;&lt; &quot;\\nTop Performing Student\\n&quot;;<br/>    cout &lt;&lt; &quot;----------------------\\n&quot;;<br/>    topper.display();<br/>}</p><p>int main() {<br/>    vector&lt;Student&gt; students;</p><p>    students.push_back(Student(101, &quot;Ali&quot;, 87.5));<br/>    students.push_back(Student(102, &quot;Sara&quot;, 92.0));<br/>    students.push_back(Student(103, &quot;Ahmed&quot;, 78.4));<br/>    students.push_back(Student(104, &quot;Ayesha&quot;, 95.6));</p><p>    cout &lt;&lt; left &lt;&lt; setw(10) &lt;&lt; &quot;ID&quot;<br/>         &lt;&lt; setw(20) &lt;&lt; &quot;Name&quot;<br/>         &lt;&lt; setw(10) &lt;&lt; &quot;Marks&quot; &lt;&lt; endl;</p><p>    cout &lt;&lt; &quot;--------------------------------------\\n&quot;;</p><p>    for (const auto&amp; student : students) {<br/>        student.display();<br/>    }</p><p>    displayTopper(students);</p><p>    saveToFile(students);</p><p>    cout &lt;&lt; &quot;\\nStudent records saved successfully.&quot; &lt;&lt; endl;</p><p>    return 0;<br/>}</p>",
+          "subject": "code n8n",
+          "date": "2026-06-08T20:51:37.000Z",
+          "to": {
+            "value": [
+              {
+                "address": "1912maira@gmail.com",
+                "name": "MAIRA"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">MAIRA</span> &lt;<a href=\"mailto:1912maira@gmail.com\" class=\"mp_address_email\">1912maira@gmail.com</a>&gt;</span>",
+            "text": "\"MAIRA\" <1912maira@gmail.com>"
+          },
+          "from": {
+            "value": [
+              {
+                "address": "1912maira@gmail.com",
+                "name": "MAIRA"
+              }
+            ],
+            "html": "<span class=\"mp_address_group\"><span class=\"mp_address_name\">MAIRA</span> &lt;<a href=\"mailto:1912maira@gmail.com\" class=\"mp_address_email\">1912maira@gmail.com</a>&gt;</span>",
+            "text": "\"MAIRA\" <1912maira@gmail.com>"
+          },
+          "messageId": "<CABGVZyXnqYdECXDtFg5EY2Gk4qhUFxEnPfFFjqm10-_5US1eTg@mail.gmail.com>"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ],
+    "Merge": [
+      {
+        "json": {
+          "text": "Here's the code with detailed comments explaining each part:\n\n```cpp\n#include <iostream>       // For input/output operations\n#include <fstream>        // For file handling operations\n#include <vector>         // For using vector container\n#include <iomanip>        // For formatting output\nusing namespace std;\n\n// Class to represent a Student\nclass Student {\nprivate:\n    int id;               // Student ID\n    string name;          // Student name\n    float marks;          // Student marks\n\npublic:\n    // Constructor to initialize student data\n    Student(int i, string n, float m) {\n        id = i;\n        name = n;\n        marks = m;\n    }\n\n    // Method to display student information in formatted way\n    void display() const {\n        cout << left << setw(10) << id\n             << setw(20) << name\n             << setw(10) << marks << endl;\n    }\n\n    // Getter method for student ID\n    int getId() const {\n        return id;\n    }\n\n    // Getter method for student name\n    string getName() const {\n        return name;\n    }\n\n    // Getter method for student marks\n    float getMarks() const {\n        return marks;\n    }\n};\n\n// Function to save student records to a file\nvoid saveToFile(const vector<Student>& students) {\n    // Create/open file named \"students.txt\"\n    ofstream file(\"students.txt\");\n\n    // Check if file opened successfully\n    if (!file) {\n        cout << \"Error opening file!\" << endl;\n        return;\n    }\n\n    // Write each student's data to the file\n    for (const auto& student : students) {\n        file << student.getId() << \" \"\n             << student.getName() << \" \"\n             << student.getMarks() << endl;\n    }\n\n    file.close();  // Close the file\n}\n\n// Function to find and display the student with highest marks\nvoid displayTopper(const vector<Student>& students) {\n    // Check if vector is empty\n    if (students.empty()) {\n        cout << \"No student records found.\" << endl;\n        return;\n    }\n\n    // Assume first student is the topper initially\n    Student topper = students[0];\n\n    // Compare marks of all students to find the topper\n    for (const auto& student : students) {\n        if (student.getMarks() > topper.getMarks()) {\n            topper = student;\n        }\n    }\n\n    // Display the topper's information\n    cout << \"\\nTop Performing Student\\n\";\n    cout << \"----------------------\\n\";\n    topper.display();\n}\n\nint main() {\n    // Create a vector to store Student objects\n    vector<Student> students;\n\n    // Add student records to the vector\n    students.push_back(Student(101, \"Ali\", 87.5));\n    students.push_back(Student(102, \"Sara\", 92.0));\n    students.push_back(Student(103, \"Ahmed\", 78.4));\n    students.push_back(Student(104, \"Ayesha\", 95.6));\n\n    // Display table header\n    cout << left << setw(10) << \"ID\"\n         << setw(20) << \"Name\"\n         << setw(10) << \"Marks\" << endl;\n\n    cout << \"--------------------------------------\\n\";\n\n    // Display all student records\n    for (const auto& student : students) {\n        student.display();\n    }\n\n    // Find and display the topper\n    displayTopper(students);\n\n    // Save records to file\n    saveToFile(students);\n\n    cout << \"\\nStudent records saved successfully.\" << endl;\n\n    return 0;\n}\n```\n\nThe comments explain:\n1. The purpose of each include directive\n2. The Student class structure and its member variables/methods\n3. The saveToFile() function's file operations\n4. The displayTopper() function's logic for finding the best student\n5. The main() function's flow of creating, displaying, and saving student records\n\nEach comment is placed above or beside the relevant code without modifying any existing lines."
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      },
+      {
+        "json": {
+          "text": "### **Code Summary**  \n\nThis C++ program manages student records, including their **ID, name, and marks**. Here's what it does:  \n\n1. **Student Class**  \n   - Stores student details (`id`, `name`, `marks`).  \n   - Provides methods to display student info and access data (`getId()`, `getName()`, `getMarks()`).  \n\n2. **Main Function**  \n   - Creates a list of students with sample data (ID, Name, Marks).  \n   - Displays all student records in a formatted table.  \n\n3. **Key Functions**  \n   - **`saveToFile()`** → Saves all student records to a file (`students.txt`).  \n   - **`displayTopper()`** → Finds and displays the student with the highest marks.  \n\n4. **Output**  \n   - Prints all student records.  \n   - Shows the top-performing student.  \n   - Saves records to a file and confirms success.  \n\n### **Quick Overview**  \n- **Input:** Hardcoded student data.  \n- **Processing:** Stores, displays, and saves student records.  \n- **Output:** Formatted student list + topper details + file save confirmation.  \n\nThis is a simple **student management system** that handles basic record-keeping tasks."
+        },
+        "pairedItem": {
+          "item": 0,
+          "input": 1
+        }
+      }
+    ],
+    "Aggregate": [
+      {
+        "json": {
+          "text": [
+            "Here's the code with detailed comments explaining each part:\n\n```cpp\n#include <iostream>       // For input/output operations\n#include <fstream>        // For file handling operations\n#include <vector>         // For using vector container\n#include <iomanip>        // For formatting output\nusing namespace std;\n\n// Class to represent a Student\nclass Student {\nprivate:\n    int id;               // Student ID\n    string name;          // Student name\n    float marks;          // Student marks\n\npublic:\n    // Constructor to initialize student data\n    Student(int i, string n, float m) {\n        id = i;\n        name = n;\n        marks = m;\n    }\n\n    // Method to display student information in formatted way\n    void display() const {\n        cout << left << setw(10) << id\n             << setw(20) << name\n             << setw(10) << marks << endl;\n    }\n\n    // Getter method for student ID\n    int getId() const {\n        return id;\n    }\n\n    // Getter method for student name\n    string getName() const {\n        return name;\n    }\n\n    // Getter method for student marks\n    float getMarks() const {\n        return marks;\n    }\n};\n\n// Function to save student records to a file\nvoid saveToFile(const vector<Student>& students) {\n    // Create/open file named \"students.txt\"\n    ofstream file(\"students.txt\");\n\n    // Check if file opened successfully\n    if (!file) {\n        cout << \"Error opening file!\" << endl;\n        return;\n    }\n\n    // Write each student's data to the file\n    for (const auto& student : students) {\n        file << student.getId() << \" \"\n             << student.getName() << \" \"\n             << student.getMarks() << endl;\n    }\n\n    file.close();  // Close the file\n}\n\n// Function to find and display the student with highest marks\nvoid displayTopper(const vector<Student>& students) {\n    // Check if vector is empty\n    if (students.empty()) {\n        cout << \"No student records found.\" << endl;\n        return;\n    }\n\n    // Assume first student is the topper initially\n    Student topper = students[0];\n\n    // Compare marks of all students to find the topper\n    for (const auto& student : students) {\n        if (student.getMarks() > topper.getMarks()) {\n            topper = student;\n        }\n    }\n\n    // Display the topper's information\n    cout << \"\\nTop Performing Student\\n\";\n    cout << \"----------------------\\n\";\n    topper.display();\n}\n\nint main() {\n    // Create a vector to store Student objects\n    vector<Student> students;\n\n    // Add student records to the vector\n    students.push_back(Student(101, \"Ali\", 87.5));\n    students.push_back(Student(102, \"Sara\", 92.0));\n    students.push_back(Student(103, \"Ahmed\", 78.4));\n    students.push_back(Student(104, \"Ayesha\", 95.6));\n\n    // Display table header\n    cout << left << setw(10) << \"ID\"\n         << setw(20) << \"Name\"\n         << setw(10) << \"Marks\" << endl;\n\n    cout << \"--------------------------------------\\n\";\n\n    // Display all student records\n    for (const auto& student : students) {\n        student.display();\n    }\n\n    // Find and display the topper\n    displayTopper(students);\n\n    // Save records to file\n    saveToFile(students);\n\n    cout << \"\\nStudent records saved successfully.\" << endl;\n\n    return 0;\n}\n```\n\nThe comments explain:\n1. The purpose of each include directive\n2. The Student class structure and its member variables/methods\n3. The saveToFile() function's file operations\n4. The displayTopper() function's logic for finding the best student\n5. The main() function's flow of creating, displaying, and saving student records\n\nEach comment is placed above or beside the relevant code without modifying any existing lines.",
+            "### **Code Summary**  \n\nThis C++ program manages student records, including their **ID, name, and marks**. Here's what it does:  \n\n1. **Student Class**  \n   - Stores student details (`id`, `name`, `marks`).  \n   - Provides methods to display student info and access data (`getId()`, `getName()`, `getMarks()`).  \n\n2. **Main Function**  \n   - Creates a list of students with sample data (ID, Name, Marks).  \n   - Displays all student records in a formatted table.  \n\n3. **Key Functions**  \n   - **`saveToFile()`** → Saves all student records to a file (`students.txt`).  \n   - **`displayTopper()`** → Finds and displays the student with the highest marks.  \n\n4. **Output**  \n   - Prints all student records.  \n   - Shows the top-performing student.  \n   - Saves records to a file and confirms success.  \n\n### **Quick Overview**  \n- **Input:** Hardcoded student data.  \n- **Processing:** Stores, displays, and saves student records.  \n- **Output:** Formatted student list + topper details + file save confirmation.  \n\nThis is a simple **student management system** that handles basic record-keeping tasks."
+          ]
+        },
+        "pairedItem": [
+          {
+            "item": 0
+          },
+          {
+            "item": 1
+          }
+        ]
+      }
+    ]
+  },
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Comments_Addition",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code_Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Comments_Addition",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Code_Summary",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comments_Addition": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code_Summary": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f941094f-aae7-42f7-83ea-7562f4a4ad5a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "287c1bec429a2520d2e3386bbe283684e97174f15a3fa3af90fe836b985d7b68"
+  },
+  "nodeGroups": [],
+  "id": "QDZbFCYz4XEHRkYZ",
+  "tags": []
+}
