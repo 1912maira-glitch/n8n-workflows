@@ -1,0 +1,248 @@
+{
+  "name": "Leads Gen Instagram",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Instagram Lead Scrapper",
+        "formDescription": "Get all the leads from Instagram directly to Airtable",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "What are you looking for?"
+            },
+            {
+              "fieldLabel": "Location"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a6840cbd-eaf8-4420-9187-e952bf2b5bbe",
+      "name": "On form submission",
+      "webhookId": "faff105a-4f51-4e67-b796-315c8f85ea70"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url":https://api.apify.com/v2/actors/apify~google-search-scraper/run-sync-get-dataset-items?token=YOUR_APIFY_TOKEN,
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"chatGptSearch\": { \"enableChatGpt\": false },\n  \"copilotSearch\": { \"enableCopilot\": false },\n  \"disableGoogleSearchResults\": false,\n  \"focusOnPaidAds\": false,\n  \"forceExactMatch\": false,\n  \"geminiSearch\": { \"enableGemini\": false },\n  \"includeIcons\": false,\n  \"includeUnfilteredResults\": false,\n  \"maxPagesPerQuery\": 10,\n  \"maximumLeadsEnrichmentRecords\": 100,\n  \"mobileResults\": false,\n  \"perplexitySearch\": {\n    \"enablePerplexity\": false,\n    \"returnImages\": false,\n    \"returnRelatedQuestions\": false\n  },\n  \"queries\": \"site:instagram.com + {{ $json['What are you looking for?'] }} {{ $json['Location'] }}\",\n  \"saveHtml\": false,\n  \"saveHtmlToKeyValueStore\": true,\n  \"verifyLeadsEnrichmentEmails\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "0def7b2e-d440-4d05-9eef-2af0fcda4920",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "e3ec059b-36aa-464b-8b80-a14125bcfa29",
+      "name": "Wait",
+      "webhookId": "a25a1034-d7c7-4014-a5b1-1d48ec96e8a4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst seen = new Set();\nconst leads = [];\n\nfunction parseFollowers(str) {\n  if (!str) return null;\n  const match = str.match(/([\\d.]+)([KkMm]?)\\+?/);\n  if (!match) return null;\n  let num = parseFloat(match[1]);\n  const suffix = match[2].toUpperCase();\n  if (suffix === 'K') num *= 1000;\n  if (suffix === 'M') num *= 1000000;\n  return Math.round(num);\n}\n\nfunction getType(url) {\n  if (url.includes('/reel/')) return 'Reel';\n  if (url.includes('/p/')) return 'Post';\n  return 'Account';\n}\n\nfor (const item of items) {\n  const organicResults = item.json.organicResults || [];\n\n  for (const result of organicResults) {\n    if (!result.url || !result.url.includes('instagram.com')) continue;\n\n    if (seen.has(result.url)) continue;\n    seen.add(result.url);\n\n    leads.push({\n      type: getType(result.url),\n      name: result.title || '',\n      instagram_url: result.url,\n      username: result.channelName || '',\n      followers: parseFollowers(result.followersAmount),\n      description: result.description || '',\n      page: item.json.searchQuery?.page || '',\n      position: result.position || '',\n    });\n  }\n}\n\nreturn leads.map(lead => ({ json: lead }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "a6b668ac-eae3-4e9e-9708-15f8dae9e046",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "base": {
+          "__rl": true,
+          "value": "appMhT2u87wuPx4Oj",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblczvwL7EXCsMskB",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Followers": "={{ $json.followers }}",
+            "Name": "={{ $json.name }}",
+            "Username": "={{ $json.username }}",
+            "Description": "={{ $json.description }}",
+            "Handle": "={{ $json.instagram_url }}",
+            "Type": "={{ $json.type }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Username",
+              "displayName": "Username",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Followers",
+              "displayName": "Followers",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Handle",
+              "displayName": "Handle",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Type",
+              "displayName": "Type",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "47bb6517-0c34-4496-90c7-b19dfbee367f",
+      "name": "Create a record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "k48UmmimfYYxPliK",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create a record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "248293c6-c6c9-4b72-88b5-4c81890c1f53",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "287c1bec429a2520d2e3386bbe283684e97174f15a3fa3af90fe836b985d7b68"
+  },
+  "nodeGroups": [],
+  "id": "mkRmadbapUDGVg0V",
+  "tags": []
+}
