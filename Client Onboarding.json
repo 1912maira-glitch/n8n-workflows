@@ -1,0 +1,502 @@
+{
+  "name": "Client Onboarding",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Welcome to Maira AI Insights",
+        "formDescription": "Kindly fill in the given information to get started with Maira AI Insights",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name",
+              "placeholder": "Maira",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "placeholder": "1912maira@gmail.com",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company Name",
+              "placeholder": "Google",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Required Services",
+              "placeholder": "e.g: Web Dev, Mob Dev etc",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Industry",
+              "placeholder": "Tec, E-com, Designing",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Starting Date",
+              "fieldType": "date",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -224,
+        -16
+      ],
+      "id": "5907688b-0c43-4b1e-84b9-a7c4cc4db81a",
+      "name": "On form submission",
+      "webhookId": "218f9934-b902-4868-8ffb-fd871ed278a1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cc9626ed-f987-4205-ad79-3c56d8d65acb",
+              "name": "Full Name",
+              "value": "={{ $json['Full Name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "5b0d46d4-0a29-4506-84aa-44b41fb15878",
+              "name": "Email",
+              "value": "={{ $json.Email }}",
+              "type": "string"
+            },
+            {
+              "id": "10f5d8d6-47ed-4d92-b216-63d2b81aa090",
+              "name": "Company Name",
+              "value": "={{ $json['Company Name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "6dc4907d-94df-4506-8433-2eb6c3f8a7cc",
+              "name": "Required Services",
+              "value": "={{ $json['Required Services'] }}",
+              "type": "string"
+            },
+            {
+              "id": "36ff6dc8-a700-4230-8943-a08b1adf8b3b",
+              "name": "Industry",
+              "value": "={{ $json.Industry }}",
+              "type": "string"
+            },
+            {
+              "id": "041ea286-df3e-4326-8526-cf692b740163",
+              "name": "Starting Date",
+              "value": "={{ $json['Starting Date'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -16,
+        -16
+      ],
+      "id": "ac31a557-82c8-4f72-b320-6fe5540913b8",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a professional business communication assistant for Maira AI Insights, a company specializing in AI Solutions, Data Science, Machine Learning, Automation, Software Development, Web Development, and Custom Digital Products.\n\nUsing the following client information:\n\n- Client Name: {{ $json[\"Full Name\"] }}\n- Email: {{ $json[\"Email\"] }}\n- Company/Business Name: {{ $json[\"Company Name\"] }}\n- Required Service: {{ $json[\"Required Services\"] }}\n- Project Start Date: {{ $json[\"Starting Date\"] }}\n- Industry: {{ $json[\"Industry\"] }}\n\nWrite a professional, warm, and personalized welcome email for the client.\n\n# Output Format (IMPORTANT):\n\nReturn the response in the following structure:\n\nSubject: <create a professional, relevant subject line>\n\nEmail:\n<write the full email body here>\n\n# Requirements:\n\n1. Address the client by name.\n2. Thank them for choosing SaadInnovates.\n3. Mention the requested service naturally.\n4. Briefly introduce SaadInnovates as an expert company in AI, Data Science, Automation, Software Development, Web Development, and Digital Solutions.\n5. Express excitement about helping their business grow.\n6. Mention the planned start date if provided.\n7. Inform the client that they will receive a separate email containing the Terms of Agreement.\n8. Politely ask them to review and either sign the agreement or reply with confirmation before project initiation.\n9. End with a professional sign-off from Maira AI Insights or the Founder (Maira).\n10. Keep the tone friendly, modern, and professional.\n11. Ensure the email is well-structured and formatted properly for professional communication.\n12. Return only the final Subject + Email output without explanations or placeholders.\n13. Generate a unique subject line and email for each client based on the provided variables.\n14. Mention the Company Owner Information at last as well.",
+        "options": {
+          "systemMessage": "=You are the official Client Relations Assistant for Maira Insights.\n\n# About Maira AI Insights:\n- A technology company specializing in Artificial Intelligence, Data Science, Machine Learning, Business Automation, Software Development, Web Development, Data Analytics, and Custom Digital Solutions.\n- The company helps businesses improve efficiency, automate processes, gain insights from data, and build scalable software products.\n- The company's communication style is professional, friendly, modern, and client-focused.\n\n# Company Information:\n- Company Name: Maira AI Insights\n- Founder & Owner: Maira\n- Business Email: 1912maira@gmail.com\n- Business Phone: +92 3004738877\n\n# Your responsibilities:\n1. Write personalized client communications based on the information provided.\n2. Make every message feel human and tailored to the client.\n3. Maintain a professional and welcoming tone.\n4. Build trust and confidence in Maira AI Insights' expertise.\n5. Clearly communicate enthusiasm for working with the client.\n6. Ensure all messages are grammatically correct and polished.\n7. Keep messages concise unless specifically asked to write detailed emails.\n\n# Writing Guidelines:\n- Always address the client by name when available.\n- Thank the client for their interest in or selection of SaadInnovates.\n- Reference the service requested by the client naturally.\n- Briefly highlight relevant expertise of SaadInnovates.\n- Focus on how the client's business can benefit from the service.\n- Avoid exaggerated marketing claims.\n- Never fabricate project details, timelines, pricing, or guarantees.\n- If appropriate, inform the client that they will receive a separate email containing the Terms of Agreement and politely ask them to review and sign it or reply with confirmation before project initiation.\n- Use positive and professional language.\n- End with a professional sign-off from SaadInnovates or the Founder when suitable.\n\n# Tone:\n- Professional\n- Friendly\n- Confident\n- Client-centric\n- Consultative rather than salesy\n\n# Output Rules:\n- Return only the final message.\n- Do not explain your reasoning.\n- Do not include placeholders that were not provided.\n- Adapt the message length to the communication channel (email).\n- If information is missing, gracefully omit it rather than mentioning missing data."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        208,
+        -160
+      ],
+      "id": "22fa8614-934c-4482-9f16-57fae5aa4ab3",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "14dc70e0-d1a3-4668-948f-6cfdfeb3eac5",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "rYWotcY7vGhDxwSU",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Parse the JSON 'output' and output the following parameters correctly: Subject Body"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        560,
+        -160
+      ],
+      "id": "bc8b3c6d-0258-4179-9bb4-2dfc04cc7bc0",
+      "name": "Welcome Email"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"subject\": { \"type\": \"string\", \"description\": \"the actual subject of the email\" },\n    \"body\": { \"type\": \"string\", \"description\": \"the content of the email, full email without subject\" }\n  },\n  \"required\": [\"subject\", \"body\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        720,
+        16
+      ],
+      "id": "604dc8bb-6ba0-4ba5-8334-268574a0d399",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        560,
+        16
+      ],
+      "id": "eb18fe0d-ea9f-40c3-98dc-bf4550921769",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "rYWotcY7vGhDxwSU",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Edit Fields').item.json.Email }}",
+        "subject": "={{ $json.output.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.output.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        912,
+        -160
+      ],
+      "id": "bd0958e3-1322-4f4e-804d-5cfd98481bb5",
+      "name": "Send a message",
+      "webhookId": "2967e344-8c33-44f6-b74e-58dc7f3de53c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rZXO951CmqWRkwB9",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Generate a Terms of Agreement email using the client details below.\n\nOUTPUT FORMAT (IMPORTANT):\nReturn ONLY in this exact structure — no extra text, no dashes, no markdown:\n\nSubject: <professional subject line here>\n\nEmail: <full email body starts here, directly after \"Email: \" on the same line or next line>\n\nCLIENT DETAILS:\n- Full Name: {{ $json[\"Full Name\"] }}\n- Email: {{ $json[\"Email\"] }}\n- Company / Business Name: {{ $json[\"Company Name\"] }}\n- Required Service: {{ $json[\"Required Services\"] }}\n- Project Start Date: {{ $json[\"Starting Date\"] }}\n- Industry: {{ $json[\"Industry\"] }}\n\nINSTRUCTIONS:\n1. Write the subject line first, then the full email body in the exact document format specified.\n2. Fill in the SERVICE PROVIDER INFORMATION and CLIENT INFORMATION blocks using the details above — do not leave these as placeholders.\n3. In Section 1 (Project Scope), describe specific deliverables and approach relevant to the client's requested service and industry — do not write generic descriptions.\n4. In Section 3 (Timeline), reference the exact project start date provided and note that the schedule may be refined during the kickoff discussion.\n5. In Section 4 (Payment Terms), state that a detailed payment schedule will be shared separately prior to project initiation and must be mutually agreed upon before work begins.\n6. In the Acceptance section, keep all signature and date fields as blank underscore lines for physical or digital signing. Pre-fill only the service provider name and title.\n7. In the closing paragraph, ask the client to reply with \"I Agree\" if accepting digitally, or to print, sign, and return the document for formal acceptance.\n8. Use today's date and \"Lahore, Pakistan\" as the document date and city.\n9. Output ONLY the final Subject + Email. No preamble, no notes.\n10. You MUST include the literal text \"Email:\" on its own line before the email body begins. This is required for parsing.",
+        "options": {
+          "systemMessage": "You are a formal business documentation assistant for Maira AI Insights — a company specializing in AI Solutions, Data Science, Machine Learning, Automation, Software Development, Web Development, and Custom Digital Products.\n\nFounder & Owner: Maira\nEmail: 1912maira@gmail.com\nPhone: +92 3004738877\nLocation: Lahore, Pakistan\n\nYour sole job is to produce a ready-to-send Terms of Agreement email. The output must follow this EXACT structure with no deviations:\n\nSubject: [subject line here]\n\n---\n\n[City, Date]\n\n[Client Name]\n[Company Name]\n[Client Email]\n\nDear [Client Name],\n\n[Opening paragraph — warm but professional, state this email contains the official Terms of Agreement between SaadInnovates and the client]\n\n─────────────────────────────────────\n        TERMS OF AGREEMENT\n        Maira AI Insights × [Company Name]\n─────────────────────────────────────\n\nSERVICE PROVIDER INFORMATION\nCompany Name   : Maira AI Insights\nOwner          : Maira\nEmail          : 1912maira@gmail.com\nPhone          : +92 3004738877\nLocation       : Lahore, Pakistan\n\nCLIENT INFORMATION\nClient Name    : [Client Name]\nCompany        : [Company Name]\nEmail          : [Client Email]\nIndustry       : [Industry]\n\n─────────────────────────────────────\n\n1. PROJECT SCOPE\n[content]\n\n2. CLIENT RESPONSIBILITIES\n[content]\n\n3. TIMELINE\n[content]\n\n4. PAYMENT TERMS\n[content]\n\n5. CONFIDENTIALITY\n[content]\n\n6. REVISIONS & CHANGE REQUESTS\n[content]\n\n7. TERMINATION\n[content]\n\n─────────────────────────────────────\n\nACCEPTANCE & CONFIRMATION\n\nBy signing below, both parties agree to the terms outlined in this document.\n\nSERVICE PROVIDER:\n\nName      : Maira\nTitle     : Founder & Owner, Maira AI Insights\nSignature : _______________________________\nDate      : _______________________________\n\n\nCLIENT:\n\nName      : _______________________________\nTitle     : _______________________________\nSignature : _______________________________\nDate      : _______________________________\n\n─────────────────────────────────────\n\n[Closing paragraph — ask client to reply with \"I Agree\" OR return a signed copy to confirm acceptance. Provide contact details for questions.]\n\nWarm regards,\n\nMaira\nFounder & Owner — Maira AI Insights\nEmail: 1912maira@gmail.com\nPhone: +92 3004738877\n\n---\n\nSTRICT RULES:\n- Output ONLY the subject line + email body. Nothing else.\n- No markdown, no asterisks, no bullet symbols — use plain text with numbered sections and dashes as shown.\n- Do not add explanations, notes, commentary, or filler text.\n- Do not leave any placeholders unfilled except the signature/date blank lines which must remain as underscores.\n- The document must look like a real, polished business agreement — not a template.\n- Tone: professional, warm, trustworthy, and client-friendly."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        192,
+        192
+      ],
+      "id": "2e9e8522-8e5d-45a3-8a07-c1cc2c7237d1",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        192,
+        368
+      ],
+      "id": "b5122864-ff52-4e2b-848d-b5ed07f519c6",
+      "name": "OpenRouter Chat Model2",
+      "credentials": {
+        "openRouterApi": {
+          "id": "rYWotcY7vGhDxwSU",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Parse the JSON 'output' and output the following parameters correctly: Subject Body"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        544,
+        192
+      ],
+      "id": "f7c6dd44-552f-44cb-bb8f-497ac616c23d",
+      "name": "Terms of Agreement Email"
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-20b:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        544,
+        368
+      ],
+      "id": "275bf1c8-e0cb-4092-b82a-2437c2409952",
+      "name": "OpenRouter Chat Model3",
+      "credentials": {
+        "openRouterApi": {
+          "id": "rYWotcY7vGhDxwSU",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"subject\": { \"type\": \"string\", \"description\": \"the actual subject of the email\" },\n    \"body\": { \"type\": \"string\", \"description\": \"the content of the email, full email without subject\" }\n  },\n  \"required\": [\"subject\", \"body\"]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        688,
+        368
+      ],
+      "id": "6f53ff96-f354-463d-b542-39ddb5cce479",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Edit Fields').item.json.Email }}",
+        "subject": "={{ $json.output.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.output.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        192
+      ],
+      "id": "b6e0e3a7-0378-4cb6-8c1b-ccb574b0c8f4",
+      "name": "Send a message1",
+      "webhookId": "297b4403-c9d5-498f-8c44-cfd7549d85bb",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rZXO951CmqWRkwB9",
+          "name": "Gmail account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Welcome Email",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Welcome Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Terms of Agreement Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Terms of Agreement Email",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Terms of Agreement Email",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terms of Agreement Email": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "02c59b91-abc8-4b1a-b54c-ce92f98750bb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "287c1bec429a2520d2e3386bbe283684e97174f15a3fa3af90fe836b985d7b68"
+  },
+  "nodeGroups": [],
+  "id": "e0oQO7yK1QKNi3ut",
+  "tags": []
+}
