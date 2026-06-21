@@ -1,0 +1,457 @@
+{
+  "name": "Video Generation",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.magichour.ai/v1/text-to-video",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer mhk_live_jBxtaNLhWzPEWbxFq3wgSh0ET3usWCuydUf8taTsFRL90vgd6aihqiie0wlQjwN7uHhF4GiFTIQWH1dM"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"output\",\n  \"end_seconds\": 5,\n  \"orientation\": \"portrait\",\n  \"audio\": true,\n  \"model\": \"ltx-2.3\",\n  \"resolution\": \"480p\",\n  \"style\": {\n    \"prompt\": {{ JSON.stringify($json.output) }}\n  }\n}",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -320,
+        -48
+      ],
+      "id": "253f7d98-f228-4ffb-ae55-fc7d0a0d889f",
+      "name": "Send Video"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.magichour.ai/v1/video-projects/{{ $json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer mhk_live_jBxtaNLhWzPEWbxFq3wgSh0ET3usWCuydUf8taTsFRL90vgd6aihqiie0wlQjwN7uHhF4GiFTIQWH1dM"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        64,
+        -48
+      ],
+      "id": "988a97d9-21e9-4df4-9f82-4f850df2fbb1",
+      "name": "Get Video"
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -112,
+        -48
+      ],
+      "id": "406f3bed-dd33-486c-abd8-de2dbfc5d052",
+      "name": "Wait",
+      "webhookId": "3a7e4893-f5f9-42e0-8161-3df7fd1229fa"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "128c6c0c-6889-462c-9a04-8c8aac1f8806",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "complete",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        240,
+        -48
+      ],
+      "id": "1a176b96-d587-4ca2-9ea5-f71b7ad71d4d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1C3wF8feRpzTsgKjxTMULP-GErm8snEamo15hGgzN62Q",
+          "mode": "list",
+          "cachedResultName": "VEO3",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1C3wF8feRpzTsgKjxTMULP-GErm8snEamo15hGgzN62Q/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1C3wF8feRpzTsgKjxTMULP-GErm8snEamo15hGgzN62Q/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Video URL": "={{ $('Get Video').item.json.downloads[0].url }}"
+          },
+          "matchingColumns": [
+            "Video URL"
+          ],
+          "schema": [
+            {
+              "id": "Video URL",
+              "displayName": "Video URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        512,
+        -64
+      ],
+      "id": "e319a00a-ef2f-4c09-b959-49c8d99eb144",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Shw0B6DwLB6ycBlO",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Get Video').item.json.downloads[0].url }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        528,
+        128
+      ],
+      "id": "842b2949-697e-430c-91e5-416c21ca4358",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "name": "123",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1zwSqbfWHFyyqO-652VhN26F87QjM8Fu-",
+          "mode": "list",
+          "cachedResultName": "VEO videos",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1zwSqbfWHFyyqO-652VhN26F87QjM8Fu-"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        720,
+        128
+      ],
+      "id": "7ee0a8b2-4818-43a5-a942-36686be645d2",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Zoa8n4lpZUeG4QOq",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload an Idea",
+        "formDescription": "give the idea for which you want to generate a video",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Idea",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -1120,
+        -48
+      ],
+      "id": "7a8a1681-7e1b-4a51-96f5-db6c9c9eed5d",
+      "name": "On form submission",
+      "webhookId": "6c632993-9a58-4fc4-9677-baa633e63c49"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.Idea }}",
+        "options": {
+          "systemMessage": "You are a professional script scene writer, kindly generate a scene from the given idea. Generate scene that covers only 8 sec video"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -928,
+        -48
+      ],
+      "id": "0bb38cda-c626-4563-bf94-bd20207b74b4",
+      "name": "Scenes"
+    },
+    {
+      "parameters": {
+        "model": "meta-llama/llama-3.3-70b-instruct",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -928,
+        128
+      ],
+      "id": "361fe7a2-5172-48aa-baba-258ab91afa0a",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "rYWotcY7vGhDxwSU",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "options": {
+          "systemMessage": "You are a professional prompt writer kindly generate a prompt that generate video according to the given scene"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -608,
+        -48
+      ],
+      "id": "ac025499-bea2-4b5c-983f-f3a5988da50b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "meta-llama/llama-3.3-70b-instruct",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        128
+      ],
+      "id": "5af9d2ee-fe12-4b0e-9cab-7cc0d8f061da",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "rYWotcY7vGhDxwSU",
+          "name": "OpenRouter account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Send Video": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Video": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Scenes",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scenes": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Get Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "9a3cda18-7202-45c8-b9d1-315f76e1bc8d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "287c1bec429a2520d2e3386bbe283684e97174f15a3fa3af90fe836b985d7b68"
+  },
+  "nodeGroups": [],
+  "id": "aAGSk1DA4KeVQK84",
+  "tags": []
+}
