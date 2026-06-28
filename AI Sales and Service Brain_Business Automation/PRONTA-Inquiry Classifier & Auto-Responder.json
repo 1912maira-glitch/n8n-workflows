@@ -1,0 +1,486 @@
+{
+  "name": "PRONTA-Inquiry Classifier & Auto-Responder",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 1,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "filters": {
+          "labelIds": [
+            "INBOX"
+          ],
+          "readStatus": "unread"
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -320,
+        -32
+      ],
+      "id": "57e33207-0c75-4fd0-89d1-5c91c5130f90",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rZXO951CmqWRkwB9",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"max_tokens\": 1000,\n  \"temperature\": 0.1,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an AI assistant for an industrial supplier company in Pakistan. Classify the incoming email and return ONLY valid JSON, no other text, no markdown, no explanation.\\n\\nCategories: UPS_POWER, GENERATORS, RO_WATER, INDUSTRIAL_PARTS, SAFETY_PPE, CCTV_SECURITY, LIGHTING, TOOLS, FURNITURE, PACKAGING, COMPLAINT, OTHER\\n\\nReturn this exact JSON format:\\n{\\n  \\\"category\\\": \\\"CATEGORY_HERE\\\",\\n  \\\"intent\\\": \\\"INQUIRY or COMPLAINT or FOLLOW_UP or SPAM\\\",\\n  \\\"urgency\\\": \\\"LOW or MEDIUM or HIGH or CRITICAL\\\",\\n  \\\"buying_intent\\\": \\\"LOW or MEDIUM or HIGH\\\",\\n  \\\"summary\\\": \\\"one sentence of what client wants\\\",\\n  \\\"client_name\\\": \\\"extracted name or Unknown\\\"\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{ 'From: ' + $json.from + '\\\\nSubject: ' + $json.subject + '\\\\nMessage: ' + ($json.text || $json.snippet || 'No content') }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -112,
+        -32
+      ],
+      "id": "0f461194-fb65-402d-bc16-07f0e7380c66",
+      "name": "Groq AI Classifier",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "muFl77YVPV6UGXQG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const groqOutput = $input.first().json;\nconst emailData = $('Gmail Trigger').first().json;\n\nfunction extractEmailBody(emailJson) {\n  try {\n    function findTextPart(parts) {\n      if (!parts) return null;\n      for (const part of parts) {\n        if (part.mimeType === 'text/plain' && part.body?.data) {\n          return Buffer.from(part.body.data, 'base64url').toString('utf-8');\n        }\n        if (part.parts) {\n          const found = findTextPart(part.parts);\n          if (found) return found;\n        }\n      }\n      return null;\n    }\n    const fromParts = findTextPart(emailJson.payload?.parts);\n    if (fromParts && fromParts.length > 10) return fromParts;\n    if (emailJson.payload?.body?.data) {\n      return Buffer.from(emailJson.payload.body.data, 'base64url').toString('utf-8');\n    }\n    if (emailJson.text && emailJson.text.length > 10) return emailJson.text;\n  } catch(e) {}\n  return emailJson.snippet || 'No content';\n}\n\n// Extract from and subject from Gmail headers\nfunction extractHeader(emailJson, headerName) {\n  try {\n    const headers = emailJson.payload?.headers || [];\n    const header = headers.find(h => h.name.toLowerCase() === headerName.toLowerCase());\n    return header ? header.value : '';\n  } catch(e) {\n    return '';\n  }\n}\n\nconst emailBody = extractEmailBody(emailData);\nconst fromHeader = extractHeader(emailData, 'From') || emailData.from || '';\nconst subjectHeader = extractHeader(emailData, 'Subject') || emailData.subject || '';\n\nconst rawContent = groqOutput.choices[0].message.content;\nconst cleaned = rawContent\n  .replace(/```json/g, '')\n  .replace(/```/g, '')\n  .trim();\n\nlet classification;\ntry {\n  classification = JSON.parse(cleaned);\n} catch (e) {\n  classification = {\n    category: \"OTHER\",\n    intent: \"INQUIRY\",\n    urgency: \"LOW\",\n    buying_intent: \"LOW\",\n    summary: \"Could not parse AI response\",\n    client_name: \"Unknown\"\n  };\n}\n\nreturn [{\n  json: {\n    category: classification.category,\n    intent: classification.intent,\n    urgency: classification.urgency,\n    buying_intent: classification.buying_intent,\n    summary: classification.summary,\n    client_name: classification.client_name,\n   from: emailData.From || emailData.from || '',\n  subject: emailData.Subject || emailData.subject || '',\n    text: emailBody,\n    date: emailData.internalDate,\n    threadId: emailData.threadId,\n    messageId: emailData.id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -32
+      ],
+      "id": "50e909be-7f66-4d1e-b1aa-e7295e47fa78",
+      "name": "Parse AI Response"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f4e23fc5-1ae4-4dc5-a9e5-c41e7adfe780",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "INQUIRY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Inquiry"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bf3ac119-8c01-402c-a753-817c61b4734f",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "COMPLAINT",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Complaint"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6c63e1f2-22d3-4a1a-aed2-00dbdda87a62",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "FOLLOW_UP",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Follow Up"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d2c8d1ab-1654-4ce1-854a-e564af2e5943",
+                    "leftValue": "={{ $json.intent }}",
+                    "rightValue": "SPAM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Spam"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        304,
+        -32
+      ],
+      "id": "1d06fc03-3dc5-4888-9f38-45f85b83aed2",
+      "name": "Route by Intent"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc",
+          "mode": "list",
+          "cachedResultName": "PRONTA Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Inquiries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ new Date().toLocaleString('en-PK', {timeZone: 'Asia/Karachi'}) }}",
+            "Client Name": "={{ $json.client_name }}",
+            "From": "={{ $json.from }}",
+            "Subject": "={{ $json.subject }}",
+            "Channel": "EMAIL",
+            "Category": "={{ $json.category }}",
+            "Intent": "={{ $json.intent }}",
+            "Urgency": "={{ $json.urgency }}",
+            "Buying Intent": "={{ $json.buying_intent }}",
+            "Summary": "={{ $json.summary }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Intent",
+              "displayName": "Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Buying Intent",
+              "displayName": "Buying Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        512,
+        -160
+      ],
+      "id": "89661d41-87f6-4dae-a652-f4d11de8de3c",
+      "name": "Log to Master Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Shw0B6DwLB6ycBlO",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json['From'] }}",
+        "subject": "={{ 'Re: ' + $json['Subject'] }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; padding: 20px;\">\n  \n  <img src=\"https://via.placeholder.com/200x60?text=PRONTA\" alt=\"PRONTA Logo\" style=\"margin-bottom: 20px;\"/>\n  \n  <p>Dear {{ $json['Client Name'] }},</p>\n\n  <p>Thank you for contacting <strong>PRONTA (Pvt) Ltd</strong>. We have received your inquiry regarding <strong>{{ $json['Category'] }}</strong> and our team will get back to you with a detailed quotation within <strong>2 business hours</strong>.</p>\n\n  <p><strong>Your Inquiry Summary:</strong><br/>\n  {{ $json['Summary'] }}</p>\n\n  <p>In the meantime, feel free to reach us at:</p>\n  <ul>\n    <li>📞 Phone: +92-XXX-XXXXXXX</li>\n    <li>📧 Email: info@pronta.com.pk</li>\n    <li>🌐 Website: www.pronta.com.pk</li>\n  </ul>\n\n  <p>Best Regards,<br/>\n  <strong>PRONTA (Pvt) Ltd</strong><br/>\n  Industrial Solutions Provider</p>\n\n  <hr style=\"border: 1px solid #eee; margin-top: 20px;\"/>\n  <p style=\"font-size: 11px; color: #999;\">This is an automated response. A human representative will follow up shortly.</p>\n\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        704,
+        -80
+      ],
+      "id": "3d386d20-e6da-4f8b-900e-c7c45d850099",
+      "name": "Gmail Auto-Reply",
+      "webhookId": "d3ac62a4-b5f6-49d4-88f7-de6e4ee82402",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rZXO951CmqWRkwB9",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "=🔔 **New {{ $json['Category'] }} Inquiry — {{ $json['Urgency'] }} Urgency**\n\n👤 **Client:** {{ $json['Client Name'] }}\n📧 **Email:** {{ $json['From'] }}\n📦 **Category:** {{ $json['Category'] }}\n⚡ **Urgency:** {{ $json['Urgency'] }}\n💰 **Buying Intent:** {{ $json['Buying Intent'] }}\n📝 **Summary:** {{ $json['Summary'] }}\n🕐 **Time:** {{ $json['Timestamp'] }}\n\n⚡ _Reply to client within 2 hours_",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        704,
+        -256
+      ],
+      "id": "6eddf074-ddd0-4989-a083-9bbc907813de",
+      "name": "Discord Sales Alert",
+      "webhookId": "09048ff1-575e-48e8-b061-fe1e18f98bfb",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "YrZNgJxr29wRErEM",
+          "name": "Discord Webhook account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Groq AI Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq AI Classifier": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Log to Master Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Master Sheet": {
+      "main": [
+        [
+          {
+            "node": "Discord Sales Alert",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gmail Auto-Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Auto-Reply": {
+      "main": [
+        []
+      ]
+    },
+    "Discord Sales Alert": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "6354500c-7f56-4ffe-a7fe-d73f391253c4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "287c1bec429a2520d2e3386bbe283684e97174f15a3fa3af90fe836b985d7b68"
+  },
+  "nodeGroups": [],
+  "id": "S5tG7wseE0HccOEk",
+  "tags": []
+}

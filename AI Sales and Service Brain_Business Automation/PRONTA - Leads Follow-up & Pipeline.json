@@ -1,0 +1,461 @@
+{
+  "name": "PRONTA - Leads Follow-up & Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0515c9a5-b284-46f1-9d7c-69d3a2466af8",
+      "name": "Daily Follow-up Check"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc",
+          "mode": "list",
+          "cachedResultName": "PRONTA Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Inquiries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "327984e8-5d9d-4c19-a5a7-02c7c3f36629",
+      "name": "Read Inquiries Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Shw0B6DwLB6ycBlO",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst now = new Date();\nconst leadsToFollowUp = [];\n\nfor (const row of rows) {\n  const data = row.json;\n  \n  // Skip if not an inquiry\n  if (data['Intent'] !== 'INQUIRY') continue;\n  \n  // Skip if already handled\n  const status = data['Status'] || '';\n  if (['QUOTED', 'RESOLVED', 'COLD', 'CONVERTED'].includes(status)) continue;\n  \n  // Skip if follow up count is 2 or more\n  const followUpCount = parseInt(data['Follow Up Count'] || 0);\n  if (followUpCount >= 2) continue;\n  \n  // Get email from multiple possible fields\n  let email = data['From'] || data['from'] || data['Client Email'] || '';\n  \n  // Extract clean email if it has name format\n  if (email.includes('<')) {\n    email = email.split('<')[1].replace('>', '').trim();\n  } else {\n    email = email.trim();\n  }\n  \n  // Skip if no valid email\n  if (!email.includes('@')) continue;\n  \n  // Get timestamp\n  const timestamp = data['Timestamp'];\n  if (!timestamp) continue;\n  \n  // Parse Pakistani date format: \"24/06/2026, 12:46:59 am\"\n  let inquiryDate;\n  try {\n    const parts = timestamp.split(', ');\n    const dateParts = parts[0].split('/');\n    const day = dateParts[0];\n    const month = dateParts[1];\n    const year = dateParts[2];\n    \n    // Build US format: MM/DD/YYYY HH:MM:SS am/pm\n    const usDateStr = `${month}/${day}/${year} ${parts[1]}`;\n    inquiryDate = new Date(usDateStr);\n    \n    // If still invalid try direct\n    if (isNaN(inquiryDate.getTime())) {\n      inquiryDate = new Date(timestamp);\n    }\n  } catch(e) {\n    inquiryDate = new Date(timestamp);\n  }\n  \n  // Skip if date is still invalid\n  if (isNaN(inquiryDate.getTime())) continue;\n  \n  const hoursDiff = (now - inquiryDate) / (1000 * 60 * 60);\n  \n  // ✅ PRODUCTION — First follow-up after 24 hours\n  if (followUpCount === 0 && hoursDiff >= 24) {\n    leadsToFollowUp.push({\n      json: {\n        rowNumber: data['row_number'] || data['rowIndex'],\n        clientName: data['Client Name'] || 'Valued Client',\n        email: email,\n        category: data['Category'] || 'your inquiry',\n        summary: data['Summary'] || '',\n        subject: data['Subject'] || '',\n        followUpCount: 0,\n        followUpType: 'FIRST',\n        timestamp: timestamp,\n        hoursDiff: Math.round(hoursDiff)\n      }\n    });\n  }\n  \n  // ✅ PRODUCTION — Second follow-up after 48 hours\n  if (followUpCount === 1 && hoursDiff >= 48) {\n    leadsToFollowUp.push({\n      json: {\n        rowNumber: data['row_number'] || data['rowIndex'],\n        clientName: data['Client Name'] || 'Valued Client',\n        email: email,\n        category: data['Category'] || 'your inquiry',\n        summary: data['Summary'] || '',\n        subject: data['Subject'] || '',\n        followUpCount: 1,\n        followUpType: 'FINAL',\n        timestamp: timestamp,\n        hoursDiff: Math.round(hoursDiff)\n      }\n    });\n  }\n}\n\nif (leadsToFollowUp.length === 0) {\n  return [{ json: { noLeads: true, message: 'No leads need follow-up today' } }];\n}\n\nreturn leadsToFollowUp;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "70eb4003-1bbb-482b-9aa1-d764dc6948b3",
+      "name": "Filter Leads"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bf12c060-f2a3-4b49-9365-96613b074b2b",
+              "leftValue": "=={{ $json.noLeads }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "0fa42d2d-daf0-4706-a6e7-1d853d2d68e4",
+      "name": "Any Leads?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"max_tokens\": 500,\n  \"temperature\": 0.7,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a professional sales follow-up email writer for PRONTA (Private) Limited, a Pakistani industrial supplier. Write short, warm, professional follow-up emails. Never sound desperate. Always end with a clear call to action. Return ONLY the email body text, no subject line, no greeting, just the body paragraphs.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"={{ 'Write a ' + $json.followUpType + ' follow-up email for: ' + '\\\\nClient: ' + $json.clientName + '\\\\nThey inquired about: ' + $json.category + '\\\\nOriginal inquiry: ' + $json.summary + '\\\\nFollow-up number: ' + ($json.followUpCount + 1) + '\\\\n\\\\nIf FIRST follow-up: be warm and helpful, offer assistance.\\\\nIf FINAL follow-up: mention this is last follow-up, offer a special priority service.' }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "4bac3540-831c-4fe1-a421-a0519d9fd894",
+      "name": "AI Follow-up Writer",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "muFl77YVPV6UGXQG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Filter Leads').first().json.email.includes('<') ? $('Filter Leads').first().json.email.split('<')[1].replace('>', '').trim() : $('Filter Leads').first().json.email.trim() }}",
+        "subject": "={{ $('Filter Leads').first().json.followUpType === 'FIRST' ? '👋 Following up on your inquiry — ' + $('Filter Leads').first().json.category : '⏰ Last follow-up — PRONTA (Pvt) Ltd' }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; padding: 20px;\">    <div style=\"background: #1A3A6B; padding: 20px; border-radius: 5px 5px 0 0;\">     <h2 style=\"color: white; margin: 0;\">PRONTA (Private) Limited</h2>     <p style=\"color: #A9CCE3; margin: 5px 0 0;\">Sourcing Redefined</p>   </div>    <div style=\"background: #f5f7fa; padding: 25px; border-radius: 0 0 5px 5px;\">     <p>Dear <strong>{{ $('Filter Leads').first().json.clientName }}</strong>,</p>      {{ $('AI Follow-up Writer').first().json.choices[0].message.content }}      <div style=\"margin-top: 20px; padding: 15px; background: #EEF2FF; border-left: 4px solid #1A3A6B; border-radius: 0 5px 5px 0;\">       <strong>📞 Get in touch with us:</strong><br/><br/>       📱 WhatsApp: +92 321 65 56 109<br/>       📧 Email: sales@prontapk.com<br/>       🌐 Website: www.prontapk.com<br/>       📍 Office # F-03, Nazir Center, 146 Ferozpur Road, Lahore     </div>      <p style=\"margin-top: 20px;\">Best Regards,<br/>     <strong>PRONTA Sales Team</strong><br/>     PRONTA (Private) Limited</p>   </div>  </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "7a18d3f1-ff5c-4e8d-adae-a46c6f158936",
+      "name": "Send Follow-up Email",
+      "webhookId": "797476fd-79b9-43ae-9d6a-dbc050965442",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rZXO951CmqWRkwB9",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc",
+          "mode": "list",
+          "cachedResultName": "PRONTA Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Inquiries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "From": "={{ $('Filter Leads').first().json.email }}",
+            "Status": "={{ $('Filter Leads').first().json.followUpType === 'FINAL' ? 'COLD' : 'FOLLOWED_UP' }}",
+            "Follow Up Count": "={{ $('Filter Leads').first().json.followUpCount + 1 }}",
+            "Last Follow Up": "={{ new Date().toLocaleString('en-PK', {timeZone: 'Asia/Karachi'}) }}"
+          },
+          "matchingColumns": [
+            "From"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Intent",
+              "displayName": "Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Urgency",
+              "displayName": "Urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Buying Intent",
+              "displayName": "Buying Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow Up Count",
+              "displayName": "Follow Up Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Follow Up",
+              "displayName": "Last Follow Up",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        -96
+      ],
+      "id": "9e1693a1-dea9-48de-acc0-736de6acab1f",
+      "name": "Update Lead Status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Shw0B6DwLB6ycBlO",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ '📊 *LEAD FOLLOW-UP SENT*\\n\\n👤 *Client:* ' + $('Filter Leads').first().json.clientName + '\\n📧 *Email:* ' + $('Filter Leads').first().json.email + '\\n📦 *Category:* ' + $('Filter Leads').first().json.category + '\\n📬 *Follow-up Type:* ' + $('Filter Leads').first().json.followUpType + '\\n⏱️ *Hours Since Inquiry:* ' + $('Filter Leads').first().json.hoursDiff + ' hours\\n🕐 *Sent At:* ' + new Date().toLocaleString(\"en-PK\", {timeZone: \"Asia/Karachi\"}) + '\\n\\n' + ($('Filter Leads').first().json.followUpType === 'FINAL' ? '⚠️ FINAL follow-up sent. If no response, lead will be marked COLD. Consider calling manually.' : '✅ First follow-up sent. System will check again tomorrow.') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        -96
+      ],
+      "id": "b1849cee-4942-4af6-a9dd-0734fd5cc65a",
+      "name": "Discord Lead Alert",
+      "webhookId": "44ed69c8-9d3c-4aa7-b20b-80b8b8ccaa15",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "YrZNgJxr29wRErEM",
+          "name": "Discord Webhook account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Follow-up Check": {
+      "main": [
+        [
+          {
+            "node": "Read Inquiries Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Inquiries Sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Leads": {
+      "main": [
+        [
+          {
+            "node": "Any Leads?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Leads?": {
+      "main": [
+        [
+          {
+            "node": "AI Follow-up Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Follow-up Writer": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow-up Email": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Status": {
+      "main": [
+        [
+          {
+            "node": "Discord Lead Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "saveExecutionProgress": true
+  },
+  "versionId": "354a4f44-7ac1-4f59-8736-85713cd05ee9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "287c1bec429a2520d2e3386bbe283684e97174f15a3fa3af90fe836b985d7b68"
+  },
+  "nodeGroups": [],
+  "id": "ffvYRxKgpMbd1t5P",
+  "tags": []
+}
