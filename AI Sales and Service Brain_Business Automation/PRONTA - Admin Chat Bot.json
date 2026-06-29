@@ -1,0 +1,242 @@
+{
+  "name": "PRONTA - Admin Chat Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "authentication": "basicAuth",
+        "initialMessages": "👋 Welcome to PRONTA Admin AI Assistant!\n\nI have access to all your business data including inquiries, complaints, leads and pipeline.\n\nAsk me anything like:\n- \"How many inquiries today?\"\n- \"Show open complaints\"\n- \"Who are our hot leads?\"\n- \"Give me today's summary\"\n\nHow can I help you today?",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "15aa5ad0-70a6-48c1-9f13-b36c5fbf9d2b",
+      "name": "Admin Chat Trigger",
+      "webhookId": "a316a451-829a-4b46-81f6-95b1d703e6af",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "wDygZTaHH31RhT1Y",
+          "name": "Unnamed credential 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc",
+          "mode": "list",
+          "cachedResultName": "PRONTA Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Inquiries",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "6f7884e9-031e-4ede-a11b-43ffb6da087c",
+      "name": "Read Inquiries Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Shw0B6DwLB6ycBlO",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc",
+          "mode": "list",
+          "cachedResultName": "PRONTA Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1057615244,
+          "mode": "list",
+          "cachedResultName": "Complaints",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit#gid=1057615244"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        416,
+        0
+      ],
+      "id": "ef1812e7-8538-4b9d-af6c-a43f0e1c87e4",
+      "name": "Read Complaints Data",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Shw0B6DwLB6ycBlO",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        784,
+        0
+      ],
+      "id": "1224d7f0-977b-4240-9182-f71c22f37dde",
+      "name": "AI Admin Agent",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "muFl77YVPV6UGXQG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ff185c4b-788d-435b-a858-e3a933458f77",
+              "name": "output",
+              "value": "={{ $json.choices[0].message.content }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        0
+      ],
+      "id": "1d12478b-4f86-4192-9ac6-239dfefe6107",
+      "name": "Send Chat Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const chatInput = $('Admin Chat Trigger').first().json.chatInput;\nconst inquiries = $('Read Inquiries Data').all().map(r => ({\n  name: r.json['Client Name'],\n  category: r.json['Category'],\n  intent: r.json['Intent'],\n  urgency: r.json['Urgency'],\n  buyingIntent: r.json['Buying Intent'],\n  status: r.json['Status'],\n  summary: r.json['Summary'],\n  timestamp: r.json['Timestamp']\n}));\n\nconst complaints = $('Read Complaints Data').all().map(r => ({\n  ticketId: r.json['Ticket ID'] || r.json[' Ticket ID'],\n  clientName: r.json['Client Name'],\n  category: r.json['Category'],\n  urgency: r.json['Urgency'],\n  status: r.json['Status'],\n  summary: r.json['AI Summary'],\n  timestamp: r.json['Timestamp']\n}));\n\n// Build summary stats\nconst totalInquiries = inquiries.length;\nconst hotLeads = inquiries.filter(i => i.buyingIntent === 'HIGH').length;\nconst openComplaints = complaints.filter(c => c.status === 'OPEN').length;\nconst criticalComplaints = complaints.filter(c => c.urgency === 'CRITICAL' && c.status === 'OPEN').length;\nconst coldLeads = inquiries.filter(i => i.status === 'COLD').length;\nconst followedUp = inquiries.filter(i => i.status === 'FOLLOWED_UP').length;\n\nconst contextSummary = `\nBUSINESS DATA SUMMARY:\n- Total Inquiries: ${totalInquiries}\n- Hot Leads (HIGH buying intent): ${hotLeads}\n- Cold Leads: ${coldLeads}\n- Followed Up: ${followedUp}\n- Open Complaints: ${openComplaints}\n- Critical Open Complaints: ${criticalComplaints}\n\nRECENT INQUIRIES (last 10):\n${JSON.stringify(inquiries.slice(-10), null, 2)}\n\nOPEN COMPLAINTS:\n${JSON.stringify(complaints.filter(c => c.status === 'OPEN').slice(-10), null, 2)}\n`;\n\nreturn [{\n  json: {\n    chatInput,\n    contextSummary,\n    requestBody: {\n      model: \"llama-3.3-70b-versatile\",\n      max_tokens: 1000,\n      temperature: 0.3,\n      messages: [\n        {\n          role: \"system\",\n          content: \"You are PRONTA Admin AI Assistant for PRONTA (Private) Limited, a Pakistani industrial supplier. You have access to real business data. Answer questions about inquiries, complaints, leads, and business performance. Be concise, professional, and data-driven. Always provide specific numbers when available. Format responses clearly with emojis for readability.\"\n        },\n        {\n          role: \"user\",\n          content: `Director Question: ${chatInput}\\n\\n${contextSummary}`\n        }\n      ]\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        608,
+        0
+      ],
+      "id": "750ab7c7-b950-4625-ab6e-9425efb4dfbe",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Admin Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Inquiries Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Inquiries Data": {
+      "main": [
+        [
+          {
+            "node": "Read Complaints Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Complaints Data": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Admin Agent": {
+      "main": [
+        [
+          {
+            "node": "Send Chat Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Admin Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "74b4be25-b8b4-4d36-b6d6-a0e59af08e43",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "287c1bec429a2520d2e3386bbe283684e97174f15a3fa3af90fe836b985d7b68"
+  },
+  "nodeGroups": [],
+  "id": "qPUuQxPmFexRS3hg",
+  "tags": []
+}
