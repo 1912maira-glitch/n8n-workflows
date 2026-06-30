@@ -1,0 +1,457 @@
+{
+  "name": "PRONTA - AMC Renewal Reminders",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "99e7b989-ffd6-49f6-9740-f485395b0688",
+      "name": "Daily AMC Check"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc",
+          "mode": "list",
+          "cachedResultName": "PRONTA Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 252198653,
+          "mode": "list",
+          "cachedResultName": "AMC Contracts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit#gid=252198653"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "b2d027ee-3b4c-421d-bd68-e3a563933dfd",
+      "name": "Read AMC Contracts",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Shw0B6DwLB6ycBlO",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const contracts = $input.all();\nconst now = new Date();\nconst remindersToSend = [];\n\nfor (const row of contracts) {\n  const data = row.json;\n  \n  // Skip if not active\n  const status = data['Status'] || '';\n  if (!['ACTIVE', 'active', 'Active'].includes(status)) continue;\n  \n  // Skip if no expiry date\n  const expiryStr = data['Contract Expiry'];\n  if (!expiryStr) continue;\n  \n  // Skip if no email\n  const email = data['Client Email'] || '';\n  if (!email.includes('@')) continue;\n  \n  // Parse expiry date DD/MM/YYYY\n  let expiryDate;\n  try {\n    const parts = expiryStr.split('/');\n    if (parts.length === 3) {\n      expiryDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);\n    } else {\n      expiryDate = new Date(expiryStr);\n    }\n  } catch(e) {\n    continue;\n  }\n  \n  if (isNaN(expiryDate.getTime())) continue;\n  \n  // Calculate days until expiry\n  const daysUntilExpiry = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));\n  \n  // Determine reminder type\n  let reminderType = null;\n  let urgencyLevel = null;\n  let urgencyColor = null;\n  \n  if (daysUntilExpiry <= 0) {\n    reminderType = 'EXPIRED';\n    urgencyLevel = 'CRITICAL';\n    urgencyColor = '🔴';\n  } else if (daysUntilExpiry <= 7) {\n    reminderType = 'URGENT';\n    urgencyLevel = 'HIGH';\n    urgencyColor = '🟠';\n  } else if (daysUntilExpiry <= 30) {\n    reminderType = 'REMINDER_30';\n    urgencyLevel = 'MEDIUM';\n    urgencyColor = '🟡';\n  } else if (daysUntilExpiry <= 60) {\n    reminderType = 'REMINDER_60';\n    urgencyLevel = 'LOW';\n    urgencyColor = '🟢';\n  }\n  \n  if (!reminderType) continue;\n  \n  // Format expiry date nicely\n  const expiryFormatted = expiryDate.toLocaleDateString('en-PK', {\n    day: '2-digit',\n    month: 'long',\n    year: 'numeric'\n  });\n  \n  remindersToSend.push({\n    json: {\n      clientName: data['Client Name'],\n      clientEmail: email,\n      clientPhone: data['Client Phone'] || '',\n      product: data['Product'],\n      contractStart: data['Contract Start'],\n      contractExpiry: expiryStr,\n      contractExpiryFormatted: expiryFormatted,\n      annualValue: data['Annual Value (PKR)'] || '0',\n      notes: data['Notes'] || '',\n      daysUntilExpiry,\n      reminderType,\n      urgencyLevel,\n      urgencyColor,\n      rowNumber: data['row_number'] || data['rowIndex']\n    }\n  });\n}\n\nif (remindersToSend.length === 0) {\n  return [{ json: { noReminders: true, message: 'No AMC contracts need attention today' } }];\n}\n\nreturn remindersToSend;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "4611fb48-ba40-4b7b-8c66-929fe97288e3",
+      "name": "Check Expiry Dates"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2a6a1be3-fade-4ed1-bed5-eda6f02a19e5",
+              "leftValue": "={{ $json.noReminders }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "f562bb9f-95e9-4569-9568-10dc59619a15",
+      "name": "Any Reminders?"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nconst urgencyMessages = {\n  'EXPIRED': 'Their contract has EXPIRED today. Be urgent but professional. Offer immediate renewal.',\n  'URGENT': `Contract expires in ${data.daysUntilExpiry} days. Be urgent. Mention service continuity risk.`,\n  'REMINDER_30': `Contract expires in ${data.daysUntilExpiry} days. Be professional. Offer renewal options.`,\n  'REMINDER_60': `Contract expires in ${data.daysUntilExpiry} days. Be warm and proactive. Mention early renewal benefits.`\n};\n\nconst requestBody = {\n  model: \"llama-3.3-70b-versatile\",\n  max_tokens: 500,\n  temperature: 0.5,\n  messages: [\n    {\n      role: \"system\",\n      content: \"You are a professional account manager for PRONTA (Private) Limited, a Pakistani industrial supplier. Write AMC renewal reminder emails. Be professional, warm, and persuasive. Never sound desperate. Always mention the value of continuing the service relationship. Keep emails under 150 words. Return ONLY the email body, no subject line.\"\n    },\n    {\n      role: \"user\",\n      content: `Write an AMC renewal email for:\nClient: ${data.clientName}\nProduct/Service: ${data.product}\nContract Expiry: ${data.contractExpiryFormatted}\nAnnual Value: PKR ${parseInt(data.annualValue).toLocaleString()}\nSituation: ${urgencyMessages[data.reminderType]}\nNotes: ${data.notes}`\n    }\n  ]\n};\n\nreturn [{\n  json: {\n    ...data,\n    requestBody\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "7488660a-a25b-435f-a70f-5c70858bb97d",
+      "name": "Build Renewal AI Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "e65b6da0-6c43-4c45-be0e-f10056b3540f",
+      "name": "AI Renewal Writer",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "muFl77YVPV6UGXQG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Check Expiry Dates').first().json.clientEmail }}",
+        "subject": "={{ $('Check Expiry Dates').first().json.urgencyColor + ' AMC Renewal — ' + $('Check Expiry Dates').first().json.product + ' — ' + $('Check Expiry Dates').first().json.contractExpiryFormatted }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 650px; margin: auto;\">    <!-- Header -->   <div style=\"background: #ffffff; padding: 25px; border-radius: 5px 5px 0 0; border-bottom: 4px solid #1A3A6B;\">     <img src=\"https://drive.google.com/uc?export=view&id=1TcJPHyV2lamgz34iecF3taD5BLmN9D6c\"           alt=\"PRONTA\" style=\"height: 55px; margin-bottom: 10px;\"/>     <p style=\"color: #555; margin: 0; font-size: 12px;\">Sourcing Redefined</p>   </div>    <!-- Urgency Banner -->   <div style=\"background: {{ $('Check Expiry Dates').first().json.reminderType === 'EXPIRED' ? '#E74C3C' : $('Check Expiry Dates').first().json.reminderType === 'URGENT' ? '#E67E22' : '#1A3A6B' }}; padding: 15px; text-align: center;\">     <h2 style=\"color: white; margin: 0; font-size: 18px;\">       {{ $('Check Expiry Dates').first().json.urgencyColor }}        {{ $('Check Expiry Dates').first().json.reminderType === 'EXPIRED' ? 'CONTRACT EXPIRED' : $('Check Expiry Dates').first().json.reminderType === 'URGENT' ? 'URGENT — Expires in ' + $('Check Expiry Dates').first().json.daysUntilExpiry + ' Days' : 'AMC Renewal Reminder — ' + $('Check Expiry Dates').first().json.daysUntilExpiry + ' Days Remaining' }}     </h2>   </div>    <!-- Body -->   <div style=\"background: #f5f7fa; padding: 25px;\">     <p>Dear <strong>{{ $('Check Expiry Dates').first().json.clientName }}</strong>,</p>      {{ $json.choices[0].message.content }}      <!-- Contract Details -->     <table style=\"width: 100%; border-collapse: collapse; margin: 20px 0;\">       <tr style=\"background: #1A3A6B; color: white;\">         <td style=\"padding: 10px;\"><strong>Contract Details</strong></td>         <td style=\"padding: 10px;\"></td>       </tr>       <tr style=\"background: #EEF2FF;\">         <td style=\"padding: 10px;\"><strong>Service</strong></td>         <td style=\"padding: 10px;\">{{ $('Check Expiry Dates').first().json.product }}</td>       </tr>       <tr>         <td style=\"padding: 10px;\"><strong>Expiry Date</strong></td>         <td style=\"padding: 10px; color: #E74C3C;\"><strong>{{ $('Check Expiry Dates').first().json.contractExpiryFormatted }}</strong></td>       </tr>       <tr style=\"background: #EEF2FF;\">         <td style=\"padding: 10px;\"><strong>Days Remaining</strong></td>         <td style=\"padding: 10px; color: #E67E22;\"><strong>{{ $('Check Expiry Dates').first().json.daysUntilExpiry }} days</strong></td>       </tr>       <tr>         <td style=\"padding: 10px;\"><strong>Annual Value</strong></td>         <td style=\"padding: 10px;\">PKR {{ parseInt($('Check Expiry Dates').first().json.annualValue).toLocaleString() }}</td>       </tr>     </table>      <!-- CTA Box -->     <div style=\"background: #E8F5E9; border-left: 5px solid #27AE60; padding: 15px; border-radius: 0 5px 5px 0; margin: 20px 0;\">       <strong>✅ Renew Your Contract Today:</strong><br/><br/>       📞 Call us: <strong>+92 321 65 56 109</strong><br/>       📧 Email: <strong>sales@prontapk.com</strong><br/>       💬 WhatsApp: <strong>+92 321 65 56 109</strong>     </div>      <p>Best Regards,<br/>     <strong>PRONTA Account Management Team</strong><br/>     PRONTA (Private) Limited</p>   </div>    <!-- Footer -->   <div style=\"background: #1A3A6B; padding: 15px; border-radius: 0 0 5px 5px; text-align: center;\">     <p style=\"color: #A9CCE3; margin: 0; font-size: 12px;\">PRONTA (Private) Limited — Sourcing Redefined</p>     <p style=\"color: #A9CCE3; margin: 5px 0 0; font-size: 12px;\">sales@prontapk.com | www.prontapk.com | +92 321 65 56 109</p>   </div>  </div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        -96
+      ],
+      "id": "a54936fb-ac55-45e1-9fd3-4de40f813947",
+      "name": "Send Renewal Email",
+      "webhookId": "3c325750-b6fa-48dc-981a-1175edcb8e62",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rZXO951CmqWRkwB9",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "content": "={{ $('Check Expiry Dates').first().json.urgencyColor + ' **AMC RENEWAL ALERT**\\n\\n👤 **Client:** ' + $('Check Expiry Dates').first().json.clientName + '\\n📞 **Phone:** ' + $('Check Expiry Dates').first().json.clientPhone + '\\n📧 **Email:** ' + $('Check Expiry Dates').first().json.clientEmail + '\\n🔧 **Product:** ' + $('Check Expiry Dates').first().json.product + '\\n📅 **Expiry Date:** ' + $('Check Expiry Dates').first().json.contractExpiryFormatted + '\\n⏰ **Days Remaining:** ' + $('Check Expiry Dates').first().json.daysUntilExpiry + ' days\\n💰 **Annual Value:** PKR ' + parseInt($('Check Expiry Dates').first().json.annualValue).toLocaleString() + '\\n⚡ **Urgency:** ' + $('Check Expiry Dates').first().json.urgencyLevel + '\\n\\n📬 Renewal email sent to client automatically.\\n_PRONTA AMC Reminder System_' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        1456,
+        -96
+      ],
+      "id": "5175ebb8-2edf-43bf-94c3-e16b5eaf019f",
+      "name": "Discord AMC Alert",
+      "webhookId": "7f1e40f3-d9f6-49bf-ba7d-e0b7370b1dd9",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "YrZNgJxr29wRErEM",
+          "name": "Discord Webhook account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc",
+          "mode": "list",
+          "cachedResultName": "PRONTA Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 252198653,
+          "mode": "list",
+          "cachedResultName": "AMC Contracts",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1WjnMCcazDDaw5YO4NcoxQvkIFJb3BknsG7hLbfvtZAc/edit#gid=252198653"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Client Email": "={{ $('Check Expiry Dates').first().json.clientEmail }}",
+            "Status": "={{ $('Check Expiry Dates').first().json.reminderType === 'EXPIRED' ? 'EXPIRED' : 'ACTIVE' }}",
+            "Last Reminder": "={{ new Date().toLocaleString('en-PK', {timeZone: 'Asia/Karachi'}) }}"
+          },
+          "matchingColumns": [
+            "Client Email"
+          ],
+          "schema": [
+            {
+              "id": "Client Name",
+              "displayName": "Client Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Client Email",
+              "displayName": "Client Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Client Phone",
+              "displayName": "Client Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product",
+              "displayName": "Product",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contract Start",
+              "displayName": "Contract Start",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contract Expiry",
+              "displayName": "Contract Expiry",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Annual Value (PKR)",
+              "displayName": "Annual Value (PKR)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Reminder",
+              "displayName": "Last Reminder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1664,
+        -96
+      ],
+      "id": "7aefd01a-5eaf-4169-ab87-bda49904d773",
+      "name": "Update AMC Status",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Shw0B6DwLB6ycBlO",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily AMC Check": {
+      "main": [
+        [
+          {
+            "node": "Read AMC Contracts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read AMC Contracts": {
+      "main": [
+        [
+          {
+            "node": "Check Expiry Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Expiry Dates": {
+      "main": [
+        [
+          {
+            "node": "Any Reminders?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any Reminders?": {
+      "main": [
+        [
+          {
+            "node": "Build Renewal AI Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Renewal AI Request": {
+      "main": [
+        [
+          {
+            "node": "AI Renewal Writer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Renewal Writer": {
+      "main": [
+        [
+          {
+            "node": "Send Renewal Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Renewal Email": {
+      "main": [
+        [
+          {
+            "node": "Discord AMC Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Discord AMC Alert": {
+      "main": [
+        [
+          {
+            "node": "Update AMC Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "saveDataSuccessExecution": "all",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "9040b82a-d227-453b-8075-c50ac3e8c192",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "287c1bec429a2520d2e3386bbe283684e97174f15a3fa3af90fe836b985d7b68"
+  },
+  "nodeGroups": [],
+  "id": "wed3B0MGS8i70swZ",
+  "tags": []
+}
